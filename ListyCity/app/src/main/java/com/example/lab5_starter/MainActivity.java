@@ -22,6 +22,7 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity implements CityDialogFragment.CityDialogListener {
 
     private Button addCityButton;
+    private Button deleteCityButton;
     private ListView cityListView;
 
     private ArrayList<City> cityArrayList;
@@ -29,6 +30,8 @@ public class MainActivity extends AppCompatActivity implements CityDialogFragmen
 
     private FirebaseFirestore db;
     private CollectionReference citiesRef;
+
+    private int pos = -1; // tracking position of selected city
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements CityDialogFragmen
 
         // Set views
         addCityButton = findViewById(R.id.buttonAddCity);
+        deleteCityButton = findViewById(R.id.buttonDeleteCity);
         cityListView = findViewById(R.id.listviewCities);
 
         // create city array
@@ -82,17 +86,21 @@ public class MainActivity extends AppCompatActivity implements CityDialogFragmen
             CityDialogFragment cityDialogFragment = CityDialogFragment.newInstance(city);
             cityDialogFragment.show(getSupportFragmentManager(),"City Details");
         });
-        cityListView.setOnItemLongClickListener((adapterView, view, position, id) -> {
-            City city = cityArrayAdapter.getItem(position);
-
-            // Delete from Firestore
-            citiesRef.document(city.getName()).delete()
-                    .addOnSuccessListener(aVoid ->
-                            Log.d("Firestore", "City deleted"))
-                    .addOnFailureListener(e ->
-                            Log.e("Firestore", "Delete failed", e));
-
-            return true; // consume the event
+        deleteCityButton.setOnClickListener(view -> {
+            if (pos != -1) {
+                City city = cityArrayAdapter.getItem(pos);
+                if (city != null) {
+                    // Delete from Firestore
+                    citiesRef.document(city.getName()).delete()
+                            .addOnSuccessListener(aVoid -> {
+                                cityArrayList.remove(pos); // remove from ListView
+                                cityArrayAdapter.notifyDataSetChanged();
+                                pos = -1; // reset selection
+                                Log.d("Firestore", "City deleted successfully");
+                            })
+                            .addOnFailureListener(e -> Log.e("Firestore", "Delete failed", e));
+                }
+            }
         });
 
     }
